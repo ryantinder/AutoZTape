@@ -18,7 +18,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>\\TMDEV\SharedFolder\AutoZTape V1.5.10\bin\</OutputPath>
+    <OutputPath>C:\Users\ryan\Documents\TM Releases\AutoZTape V.1.5.11\New folder\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>

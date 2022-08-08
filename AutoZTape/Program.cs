@@ -29,55 +29,46 @@ namespace AutoZTape
         {
             if (ConfigurationManager.AppSettings.Get("disableProgram") == "true")
             {
-                Console.WriteLine("Program Disabled");
                 Log("Program Disabled");
                 Environment.Exit(-1);
             }
             if (ConfigurationManager.AppSettings.Get("testConnections") == "true")
             {
-                Console.WriteLine("Program configured to only test connections");
                 Log("Program configured to only test connection");
 
                 IDbConnection con1 = new System.Data.SqlClient.SqlConnection(target);
-                Console.WriteLine("Connecting to target...");
                 Log("Connecting to target...");
 
                 con1.Open();
-                Console.WriteLine("Connection  " + (con1.State == ConnectionState.Open ? "successful" : "failed"));
                 Log("Connection  " + (con1.State == ConnectionState.Open ? "successful" : "failed"));
 
                 con1.Close();
 
                 OdbcConnection con2 = new OdbcConnection(sybase);
-                Console.WriteLine("Connecting to Sybase");
                 Log("Connecting to Sybase");
 
                 con2.Open();
-                Console.WriteLine("Connection  " + (con2.State == ConnectionState.Open ? "successful" : "failed"));
                 Log("Connection  " + (con2.State == ConnectionState.Open ? "successful" : "failed"));
                 con2.Close();
 
-                Console.WriteLine("Test concluded, press any key to exit");
                 Console.ReadKey();
                 Environment.Exit(1);
 
             }
-            Console.WriteLine("Program starting...");
+            Log("Program starting...");
 
             if (ConfigurationManager.AppSettings.Get("disableAutoUpdate") != "true")
             {
                 try
                 {
-                    checkForUpdates();
+                    // checkForUpdates();
                 } catch (Exception e)
                 {
-                    Console.WriteLine(e);
                     Log(e.ToString());
                 }
             }
             else
             {
-                Console.WriteLine("Auto update disabled");
                 Log("Auto update disabled");
             }
             APILoginID = findApiLoginId();
@@ -85,7 +76,6 @@ namespace AutoZTape
 
 
             //Monitoring System
-            Console.WriteLine("Opening connection to target");
             IDbConnection targetConnection = new System.Data.SqlClient.SqlConnection(target);
    
             targetConnection.Open();
@@ -110,7 +100,6 @@ namespace AutoZTape
             else
             {
                 date = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0);
-                
             }
 
             Log("Disable push to live = " + ConfigurationManager.AppSettings.Get("disableLivePush"));
@@ -122,15 +111,12 @@ namespace AutoZTape
             bool shouldFetchMobileSales = ConfigurationManager.AppSettings.Get("disableMobileAPI") == "true" ? false : true;
             object buffer;
             
-            Console.WriteLine("Connection state = " + (targetConnection.State == ConnectionState.Open));
             Log(((targetConnection.State == ConnectionState.Open) ? "Successful" : "Unsuccesful") + " connection to dev server");
             buffer = targetConnection.ExecuteScalar("select ztapeid from ZTape where ztapedate = '" + date + "' and storeid = " + ConfigurationManager.AppSettings.Get("StoreId"));
 
             if (buffer != null && buffer != DBNull.Value)
             {
-                Console.WriteLine("ZTape already found for date " + date + ", ZTapeId = " + (int)buffer);
                 Log("ZTape already found for date " + date + ", ZTapeId = " + (int)buffer);
-
             }
 
             else
@@ -153,7 +139,6 @@ namespace AutoZTape
                                     + "@PaidTimeOffCount, @PaidTimeOff, @DepositBy1, @DepositDate1, @DepositValid1, @DepositBy2, @DepositDate2, @DepositValid2, @DepositBy3, @DepositDate3, "
                                     + "@DepositValid3, @CCBatchInside, @CCBatchDrive, @CCBatchMobile, @CCMobile", ztape);
 
-                Console.WriteLine("ZTape added for date " + date.ToString());
                 Log("ZTape added for date " + date.ToString());
 
             }            
@@ -179,7 +164,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.ReportableSales = (buffer == null || buffer == DBNull.Value) ? 0 : (double)buffer;
-            Console.Out.WriteLine("Reportable Sales = " + ztape.ReportableSales);
             Log("Reportable Sales = " + ztape.ReportableSales);
 
 
@@ -191,7 +175,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.SalesTax = (buffer == null || buffer == DBNull.Value) ? 0 : (double)buffer;
-            Console.Out.WriteLine("Sales Tax = " + ztape.SalesTax);
             Log("Sales Tax = " + ztape.SalesTax);
 
 
@@ -201,7 +184,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.MgrMealsCount = (buffer == null || buffer == DBNull.Value) ? 0 : Convert.ToInt32(buffer);
-            Console.Out.WriteLine("Mgr Meals Count = " + ztape.MgrMealsCount);
             Log("Mgr Meals Count = " + ztape.MgrMealsCount);
 
             paramText = "SELECT coalesce(SUM(dba.POSDETAIL.COSTEACH), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate BETWEEN '" + startTime +
@@ -210,7 +192,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.MgrMealsSales = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
-            Console.Out.WriteLine("Mgr Meals Sales = " + ztape.MgrMealsSales);
             Log("Mgr Meals Sales = " + ztape.MgrMealsSales);
 
 
@@ -220,7 +201,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.CouponsCount = (buffer == null || buffer == DBNull.Value) ? 0 : Convert.ToInt32(buffer);
-            Console.Out.WriteLine("Coupon Count = " + ztape.CouponsCount);
             Log("Coupon Count = " + ztape.CouponsCount);
 
             paramText = "SELECT coalesce( SUM(dba.POSDETAIL.COSTEACH), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate BETWEEN '" + startTime
@@ -229,7 +209,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.CouponsSales = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
-            Console.Out.WriteLine("Coupon Sales = " + ztape.CouponsSales);
             Log("Coupon Sales = " + ztape.CouponsSales);
 
 
@@ -239,7 +218,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.TenPercentDiscountCount = (buffer == null || buffer == DBNull.Value) ? 0 : Convert.ToInt32(buffer);
-            Console.Out.WriteLine("10% Count = " + ztape.TenPercentDiscountCount);
             Log("10% Count = " + ztape.TenPercentDiscountCount);
 
 
@@ -249,7 +227,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.TenPercentDiscountSales = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
-            Console.Out.WriteLine("10% Sales = " + ztape.TenPercentDiscountSales);
             Log("10% sales = " + ztape.TenPercentDiscountSales);
 
             paramText = "SELECT coalesce(SUM(dba.POSDETAIL.QUAN), 0) as TOTAL FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate BETWEEN '" + startTime
@@ -258,7 +235,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.EmployeeMealsCount = (buffer == null || buffer == DBNull.Value) ? 0 : Convert.ToInt32(buffer);
-            Console.Out.WriteLine("Employee Meals Count = " + ztape.EmployeeMealsCount);
             Log("Employee Meals Count = " + ztape.EmployeeMealsCount);
 
             paramText = "SELECT coalesce(SUM(dba.POSDETAIL.COSTEACH), 0) as TOTAL FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate BETWEEN '" + startTime
@@ -267,11 +243,9 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.EmployeeMealsSales = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
-            Console.Out.WriteLine("Employee Meals Sales = " + ztape.EmployeeMealsSales);
             Log("Employee Meals Sales = " + ztape.EmployeeMealsSales);
 
             ztape.GrossSales = ztape.MgrMealsSales + ztape.CouponsSales + ztape.TenPercentDiscountSales + ztape.EmployeeMealsSales + ztape.ReportableSales;
-            Console.WriteLine("Gross Sales = " + ztape.GrossSales);
             Log("Gross Sales = " + ztape.GrossSales);
 
             paramText = "select coalesce(sum(numcust), 0) from (select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax, numcust from (select posheader.opendate, posheader.status, posheader.timeend,"
@@ -282,7 +256,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.EatInCount = (buffer == null || buffer == DBNull.Value) ? 0 : Convert.ToInt32(buffer);
-            Console.Out.WriteLine("Eat In Count = " + ztape.EatInCount);
             Log("Eat In Count = " + ztape.EatInCount);
 
             paramText = "select coalesce(sum(nettotal), 0) from (select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax, numcust from (select posheader.opendate, posheader.status, posheader.timeend,"
@@ -293,7 +266,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.EatInSales = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
-            Console.Out.WriteLine("Eat In Sales = " + ztape.EatInSales);
             Log("Eat In Sales = " + ztape.EatInSales);
 
             paramText = "select coalesce(sum(numcust), 0) from(select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax, numcust from(select posheader.opendate, posheader.status, posheader.timeend, posheader.finaltotal, "
@@ -304,7 +276,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.CarryOutCount = (buffer == null || buffer == DBNull.Value) ? 0 : Convert.ToInt32(buffer);
-            Console.Out.WriteLine("Carry Out Count = " + ztape.CarryOutCount);
             Log("Carry Out Count = " + ztape.CarryOutCount);
 
             paramText = "select coalesce(sum(nettotal), 0) from(select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax, numcust from(select posheader.opendate, posheader.status, posheader.timeend, posheader.finaltotal, "
@@ -315,7 +286,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.CarryOutSales = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
-            Console.Out.WriteLine("Carry Out Sales = " + ztape.CarryOutSales);
             Log("Carry Out Sales = " + ztape.CarryOutSales);
 
             paramText = "select coalesce(sum(numcust), 0) from(select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax, numcust from(select posheader.opendate, posheader.status, posheader.timeend, posheader.finaltotal, "
@@ -326,7 +296,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.DThruCount = (buffer == null || buffer == DBNull.Value) ? 0 : Convert.ToInt32(buffer);
-            Console.Out.WriteLine("DThru Count = " + ztape.DThruCount);
             Log("DThru Count = " + ztape.DThruCount);
 
             paramText = "select coalesce(sum(nettotal), 0) from(select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax, numcust from(select posheader.opendate, posheader.status, posheader.timeend, posheader.finaltotal, "
@@ -337,7 +306,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.DThruSales = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
-            Console.Out.WriteLine("DThru Sales = " + ztape.DThruSales);
             Log("DThru Sales = " + ztape.DThruSales);
 
             paramText = "select coalesce(count(quan), 0) from(select* from dba.posdetail left outer join dba.refundreasons on posdetail.howordered = refundreasons.refnum  where opendate BETWEEN '" + startTime + "' AND '" + endTime + "' and refnum > 1000 and costeach<> 0) x";
@@ -345,7 +313,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.VoidsCount = (buffer == null || buffer == DBNull.Value) ? 0 : Convert.ToInt32(buffer);
-            Console.Out.WriteLine("Voids count = " + ztape.VoidsCount);
             Log("Voids count = " + ztape.VoidsCount);
 
 
@@ -354,7 +321,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.VoidsSales = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
-            Console.Out.WriteLine("Voids sales = " + ztape.VoidsSales);
             Log("Voids sales = " + ztape.VoidsSales);
 
 
@@ -363,7 +329,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.NonTaxTransactionsCount = (buffer == null || buffer == DBNull.Value) ? 0 : Convert.ToInt32(buffer);
-            Console.Out.WriteLine("Non tax count = " + ztape.NonTaxTransactionsCount);
             Log("Non tax count = " + ztape.NonTaxTransactionsCount);
 
             paramText = "select coalesce(sum(nettotal), 0) from dba.posheader where tax1exempt = 1 and opendate BETWEEN '" + startTime + "' AND '" + endTime + "'";
@@ -371,9 +336,7 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.NonTaxTransactionsSales = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
-            Console.Out.WriteLine("Non tax sales = " + ztape.NonTaxTransactionsSales);
             Log("Non tax sales = " + ztape.NonTaxTransactionsSales);
-
 
 
             paramText = "select coalesce(sum(tender), 0) from(select * from  dba.Howpaid left outer join dba.MethodPay on howpaid.methodnum = methodpay.methodnum where opendate BETWEEN '" + startTime + "' AND '" + endTime + "' and descript = 'Gift Card' and tender < 0) x";
@@ -381,7 +344,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.GiftCardsSales = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
-            Console.Out.WriteLine("Gift card sales = " + ztape.GiftCardsSales);
             Log("Gift card sales = " + ztape.GiftCardsSales);
 
             paramText = "select coalesce(sum(tender), 0) from(select * from  dba.Howpaid left outer join dba.MethodPay on howpaid.methodnum = methodpay.methodnum where opendate BETWEEN '" + startTime + "' AND '" + endTime + "' and descript = 'Gift Card' and tender > 0) x";
@@ -389,7 +351,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.GCRedemption = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
-            Console.Out.WriteLine("Gift card redemption = " + ztape.GCRedemption);
             Log("Gift card redemption = " + ztape.GCRedemption);
 
             paramText = "select sum(tender) from(select* from  dba.Howpaid left outer join dba.MethodPay on howpaid.methodnum = methodpay.methodnum where opendate BETWEEN '" + startTime + "' AND '" + endTime + "' and descript = 'EMP Charge') x";
@@ -397,7 +358,6 @@ namespace AutoZTape
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.EmpMealCharges = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
-            Console.Out.WriteLine("Emp Meal Charges = " + ztape.EmpMealCharges);
             Log("Emp Meal Charges = " + ztape.EmpMealCharges);
 
             // Drive CC
@@ -418,7 +378,6 @@ namespace AutoZTape
             Log("DriveCC3 = " + DriveCC3);
 
             ztape.CreditCardVisaMc2 = DriveCC1 + DriveCC3;
-            Console.Out.WriteLine("Drive CC = " + ztape.CreditCardVisaMc2);
             Log("Drive CC = " + ztape.CreditCardVisaMc2);
             sybaseConnection.Close();
 
@@ -437,12 +396,10 @@ namespace AutoZTape
                 {
                     Log(e.Message);
                     Log(e.StackTrace);
-                    Console.WriteLine(e.Message);
                 }
             }
             else
             {
-                Console.WriteLine("Mobile fetching diabled");
                 Log("Mobile fetching disabled");
             }
 
@@ -451,23 +408,19 @@ namespace AutoZTape
 
             if (shouldPushTolive)
             {
-                Console.WriteLine("Push to live enabled, Connecting to target");
                 Log("Push to live enabled, connecting to target");
                 
-                Console.WriteLine("Connection successful, executing command");
                 Log("Connection to target successful, executing update command");
 
                 targetConnection.Execute("dbo.updateZTape @ZTapeDate, @StoreId, @Store, @SubmitDate, @GrossSales, @ReportableSales, @SalesTax, @MgrMealsCount, @MgrMealsSales, @CouponsCount, "
                                         + "@CouponsSales, @TenPercentDiscountCount, @TenPercentDiscountSales, @EmployeeMealsCount, @EmployeeMealsSales, @EatInCount, @EatInSales, "
                                         + "@CarryOutCount, @CarryOutSales, @DThruCount, @DThruSales, @VoidsCount, @VoidsSales, @NonTaxTransactionsCount, @NonTaxTransactionsSales, @GCSold, @GCRedemption, @EmpMealCharges, @CreditCardVisaMc2, @CCMobile", ztape);
                 targetConnection.Execute("update autoZTapeMonitoring set CP3_PacketPushed = 1 where store = '" + ztape.Store + "'");
-                Console.WriteLine("Command execution successful");
                 Log("Execution successful...terminating");
                 
             }
             else
             {
-                Console.WriteLine("Live push disabled");
                 Log("Live Push disabled");
             }
 
@@ -494,8 +447,7 @@ namespace AutoZTape
             DateTime startDate = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0);
             DateTime searchEndDate = (startDate.AddDays(3).CompareTo(DateTime.Now) >= 0) ? new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, DateTime.Now.Hour, 0, 0) : startDate.AddDays(3);
             DateTime timeframeEnd = date.AddHours(30);
-            Console.WriteLine(startDate);
-            Console.WriteLine(startDate.ToLocalTime());
+            Log(startDate.ToLocalTime().ToString());
             var response = Authorize.GetSettledBatchListForDateRange(startDate, searchEndDate) as getSettledBatchListResponse;
 
             if (response == null)
@@ -532,10 +484,14 @@ namespace AutoZTape
                         //If settled, count it
                         else if (transaction.submitTimeLocal.CompareTo(startDate) >= 0 && transaction.submitTimeLocal.CompareTo(timeframeEnd) <= 0 && transaction.transactionStatus == "settledSuccessfully")
                         {
-                            Console.WriteLine("Counting -> " + transaction.settleAmount);
                             Log("Counting -> " + transaction.settleAmount);
-
-                            CCMobile += Convert.ToDouble(transaction.settleAmount);
+                            try
+                            {
+                                CCMobile += Convert.ToDouble(transaction.settleAmount);
+                            } catch(Exception e)
+                            {
+                                Log(e.Message);
+                            }
                         }
 
                         //If refunded, check all batches for an equal amount, if equal amount is 
@@ -552,7 +508,6 @@ namespace AutoZTape
                                     if (checkTransaction == null) { continue; }
                                     if (checkTransaction.settleAmount == transaction.settleAmount && checkTransaction.submitTimeLocal.CompareTo(startDate) >= 0 && checkTransaction.submitTimeLocal.CompareTo(timeframeEnd) <= 0 && checkTransaction.transId != transaction.transId)
                                     {
-                                        Console.WriteLine("Subtracting -> " + transaction.settleAmount);
                                         Log("Refunding -> " + transaction.settleAmount);
                                         CCMobile = CCMobile - Convert.ToDouble(transaction.settleAmount);
                                     }
@@ -583,16 +538,17 @@ namespace AutoZTape
                     }
                     if (transaction.submitTimeLocal.CompareTo(startDate) >= 0 && transaction.submitTimeLocal.CompareTo(timeframeEnd) <= 0 && transaction.transactionStatus == "capturedPendingSettlement")
                     {
-                        Console.WriteLine("Counting -> " + transaction.settleAmount);
+                        Log("Counting -> " + transaction.settleAmount);
                         CCMobile += Convert.ToDouble(transaction.settleAmount);
                     }
                 }
             }
-            Console.WriteLine("CCMobile = " + CCMobile);
+            Log("CCMobile = " + CCMobile);
             return CCMobile;
         }
         public static void Log(string s)
         {
+            Console.WriteLine(s);
             logArray.Add(DateTime.Now.ToString("HH:mm:ss") + " : " + s);
         }
         public static void DumpLog()
@@ -603,7 +559,6 @@ namespace AutoZTape
             if (!Directory.Exists(rootFolder))
             {
                 System.IO.Directory.CreateDirectory(rootFolder);
-                Console.WriteLine("Directory created");
             }
             if (!File.Exists(pathString))
             {
@@ -615,7 +570,6 @@ namespace AutoZTape
                     f.WriteLine("*This is a log file that collects data from each run of AutoZTape.exe");
                     f.WriteLine("*\n*\n*\n");
                 }
-                Console.WriteLine("Log file created");
             }
             if (Directory.Exists(rootFolder) && File.Exists(pathString))
             {
@@ -639,14 +593,12 @@ namespace AutoZTape
             using (IDbConnection connection = new System.Data.SqlClient.SqlConnection(target))
             {
                 connection.Open();
-                Console.WriteLine("Connection successful, finding API Login ID");
                 Log("Connection successful, finding API Login ID");
 
                 ApiLoginId = connection.ExecuteScalar("select ApiLoginId from AuthorizeNetApiCredentials where store = '" + ConfigurationManager.AppSettings.Get("Store") + "'") as string;
 
                 connection.Close();
 
-                Console.WriteLine("Command execution successful, API Login ID = " + ApiLoginId);
                 Log("Execution successful, API Login ID = " + APILoginID + "...terminating");
             }
 
@@ -661,14 +613,12 @@ namespace AutoZTape
             using (IDbConnection connection = new System.Data.SqlClient.SqlConnection(target))
             {
                 connection.Open();
-                Console.WriteLine("Connection successful, finding API Login ID");
                 Log("Connection to target successful, finding API login ID");
 
                 transactionKey = connection.ExecuteScalar("select TransactionKey from AuthorizeNetApiCredentials where store = '" + ConfigurationManager.AppSettings.Get("Store") + "'") as string;
 
                 connection.Close();
 
-                Console.WriteLine("Command execution successful, API Login ID = " + transactionKey);
                 Log("Execution successful, API Login ID = " + transactionKey + "...terminating");
             }
 
@@ -694,14 +644,12 @@ namespace AutoZTape
                 ServicePointManager.Expect100Continue = true;
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
                 wc.Headers.Add("a", "a");
-                Console.WriteLine("Downloading latest version NUMBER...");
+                Log("Downloading latest version NUMBER...");
                 s = wc.DownloadString("https://raw.githubusercontent.com/tmmaster/TMVersioning/main/LatestZTapeVersion");
-                Console.WriteLine("Successful, latest version: " + s);
+                Log("Successful, latest version: " + s);
             }
             //Read the actual number
             Version latestVersion = new Version(s);
-            Console.WriteLine("Current version = " + currentVersion.ToString() + ", newest Version = " + latestVersion.ToString());
-            Console.WriteLine("Needs update? " + (currentVersion < latestVersion));
 
             Log("Current version = " + currentVersion.ToString() + ", newest Version = " + latestVersion.ToString());
             Log("Needs update? " + (currentVersion < latestVersion));
@@ -716,7 +664,6 @@ namespace AutoZTape
             // New version procedures
 
             //Download new version ZIP
-            Console.WriteLine("Downloading new version .zip");
             Log("Downloading AutoZTape V" + latestVersion.ToString());
             string newVersionID = "https://raw.githubusercontent.com/tmmaster/TMVersioning/main/AutoZTape V" + latestVersion.ToString() + ".zip";
             string destinationPath = "C:/PixelPOS/AutoZTape/AutoZTape V" + latestVersion.ToString() + ".zip";
@@ -730,14 +677,12 @@ namespace AutoZTape
                     //skips to extraction if file exists, downloads otherwise
                     if (File.Exists(destinationPath))
                     {
-                        Console.WriteLine("***latest version ZIP alread exists, V" + latestVersion.ToString() + ", @ path: " + destinationPath + " ---> returning");
-                        Log("* **latest version ZIP alread exists, V" + latestVersion.ToString() + ", @ path: " + destinationPath + "--->returning");
+                        Log("***latest version ZIP alread exists, V" + latestVersion.ToString() + ", @ path: " + destinationPath + "--->returning");
 
                     }
                     else
                     {
                         wc.DownloadFile(newVersionID, destinationPath);
-                        Console.WriteLine("Success");
                         Log("Success");
                     }
 
@@ -749,11 +694,9 @@ namespace AutoZTape
 
 
             // Initial File extraction
-            Console.WriteLine("Extracting to directory");
             string firstDirPath = "C:/PixelPOS/AutoZTape/AutoZZTape V" + latestVersion.ToString();
             if (File.Exists(firstDirPath + "/AutoZTape V" + latestVersion.ToString() + "/bin/AutoZTape.exe"))
             {
-                Console.WriteLine("***Initial Extraction Directory Path already exists, V" + latestVersion.ToString() + ", @ path: " + firstDirPath + "--> returning");
                 Log("***Initial Extraction Directory Path already exists, V" + latestVersion.ToString() + ", @ path: " + firstDirPath + "--> returning");
 
             }
