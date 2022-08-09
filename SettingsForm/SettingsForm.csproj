@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>C:\Users\ryan\Documents\TM Releases\AutoZTape V.1.5.11\New folder\</OutputPath>
+    <OutputPath>C:\Users\ryan\Documents\TM Releases\AutoZTape V1.5.12\</OutputPath>
     <Prefer32Bit>true</Prefer32Bit>
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>

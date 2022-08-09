@@ -32,56 +32,13 @@ namespace AutoZTape
                 Log("Program Disabled");
                 Environment.Exit(-1);
             }
-            if (ConfigurationManager.AppSettings.Get("testConnections") == "true")
-            {
-                Log("Program configured to only test connection");
-
-                IDbConnection con1 = new System.Data.SqlClient.SqlConnection(target);
-                Log("Connecting to target...");
-
-                con1.Open();
-                Log("Connection  " + (con1.State == ConnectionState.Open ? "successful" : "failed"));
-
-                con1.Close();
-
-                OdbcConnection con2 = new OdbcConnection(sybase);
-                Log("Connecting to Sybase");
-
-                con2.Open();
-                Log("Connection  " + (con2.State == ConnectionState.Open ? "successful" : "failed"));
-                con2.Close();
-
-                Console.ReadKey();
-                Environment.Exit(1);
-
-            }
             Log("Program starting...");
 
-            if (ConfigurationManager.AppSettings.Get("disableAutoUpdate") != "true")
-            {
-                try
-                {
-                    // checkForUpdates();
-                } catch (Exception e)
-                {
-                    Log(e.ToString());
-                }
-            }
-            else
-            {
-                Log("Auto update disabled");
-            }
             APILoginID = findApiLoginId();
             TransactionKey = findTransactionKey();
 
-
-            //Monitoring System
             IDbConnection targetConnection = new System.Data.SqlClient.SqlConnection(target);
    
-            targetConnection.Open();
-            targetConnection.Execute("update AutoZTapeMonitoring set runningversion = '" + currentVersion.ToString() + "', processinitiated = '" + DateTime.Now.ToString() + "', CP1_PacketGenerated = 0, CP2_MobileSalesGenerated = 0, " +
-                                "CP3_PacketPushed = 0, CP4_EndOfProgramReached = 0 where store = '" + ConfigurationManager.AppSettings.Get("Store") + "'");
-            
             
             if (ConfigurationManager.AppSettings.Get("dateOverride") != "false")
             {
@@ -146,6 +103,7 @@ namespace AutoZTape
             ztape.ZTapeDate = date;
             OdbcCommand cmd = new OdbcCommand();
             string paramText;
+            string startDate = date.ToString("yyyy-MM-dd");
             string startTime = date.ToString("yyyy-MM-dd") + " 06:00:00.000";
             string endTime = date.AddDays(1).ToString("yyyy-MM-dd") + " 3:00:00.000";
 
@@ -154,8 +112,8 @@ namespace AutoZTape
 
             paramText = "select coalesce(sum(nettotal), 0) from(select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax from(select posheader.opendate, posheader.status, posheader.timeend, posheader.finaltotal, "
                         + "posheader.numcust, posdetail.costeach, posdetail.quan, posheader.saletypeindex, posheader.transact, posdetail.prodtype, salestype.descript, posheader.nettotal, posheader.tax1 from dba.posheader left outer join "
-                        + "dba.posdetail on posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate BETWEEN '" + startTime + "' AND '" + endTime + "'"
-                        + "and posheader.status = 3 and posdetail.prodtype <> 100 and finaltotal <> 0) x group by transact) x";
+                        + "dba.posdetail on posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate = '" + startDate + "'"
+                        + " and posheader.status = 3 and posdetail.prodtype <> 100 and finaltotal <> 0) x group by transact) x";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
@@ -165,7 +123,7 @@ namespace AutoZTape
 
             paramText = "select coalesce(sum(tax), 0) from(select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax from(select posheader.opendate, posheader.status, posheader.timeend, posheader.finaltotal, "
                         + "posheader.numcust, posdetail.costeach, posdetail.quan, posheader.saletypeindex, posheader.transact, posdetail.prodtype, salestype.descript, posheader.nettotal, posheader.tax1 from dba.posheader left outer join "
-                        + "dba.posdetail on posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate BETWEEN '" + startTime + "' AND '" + endTime + "'"
+                        + "dba.posdetail on posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate = '" + startDate + "' "
                         + "and posheader.status = 3 and posdetail.prodtype <> 100 and finaltotal <> 0) x group by transact) x";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
@@ -174,16 +132,14 @@ namespace AutoZTape
             Log("Sales Tax = " + ztape.SalesTax);
 
 
-            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.QUAN), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate BETWEEN '" + startTime +
-                "' AND '" + endTime + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript = 'COMP'";
+            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.QUAN), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate = '" + startDate + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript = 'COMP'";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.MgrMealsCount = (buffer == null || buffer == DBNull.Value) ? 0 : Convert.ToInt32(buffer);
             Log("Mgr Meals Count = " + ztape.MgrMealsCount);
 
-            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.COSTEACH), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate BETWEEN '" + startTime +
-                "' AND '" + endTime + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript = 'COMP'";
+            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.COSTEACH), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate = '" + startDate + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript = 'COMP'";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
@@ -191,16 +147,14 @@ namespace AutoZTape
             Log("Mgr Meals Sales = " + ztape.MgrMealsSales);
 
 
-            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.QUAN), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate BETWEEN '" + startTime
-                + "' AND '" + endTime + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript not in ('COMP', 'SR DISCOUNT', 'EMPLOYEE DISCOUNT')";
+            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.QUAN), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate = '" + startDate + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript not in ('COMP', 'SR DISCOUNT', 'EMPLOYEE DISCOUNT')";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.CouponsCount = (buffer == null || buffer == DBNull.Value) ? 0 : Convert.ToInt32(buffer);
             Log("Coupon Count = " + ztape.CouponsCount);
 
-            paramText = "SELECT coalesce( SUM(dba.POSDETAIL.COSTEACH), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate BETWEEN '" + startTime
-                + "' AND '" + endTime + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript not in ('COMP', 'SR DISCOUNT', 'EMPLOYEE DISCOUNT')";
+            paramText = "SELECT coalesce( SUM(dba.POSDETAIL.COSTEACH), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate = '" + startDate + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript not in ('COMP', 'SR DISCOUNT', 'EMPLOYEE DISCOUNT')";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
@@ -208,8 +162,7 @@ namespace AutoZTape
             Log("Coupon Sales = " + ztape.CouponsSales);
 
 
-            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.QUAN), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate BETWEEN '" + startTime + "' AND '" + endTime +
-                "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript = 'SR DISCOUNT'";
+            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.QUAN), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate = '" + startDate + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript = 'SR DISCOUNT'";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
@@ -217,24 +170,21 @@ namespace AutoZTape
             Log("10% Count = " + ztape.TenPercentDiscountCount);
 
 
-            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.COSTEACH), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate BETWEEN '" + startTime + "' AND '" + endTime +
-                "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript = 'SR DISCOUNT'";
+            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.COSTEACH), 0) FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate = '" + startDate + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript = 'SR DISCOUNT'";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.TenPercentDiscountSales = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
             Log("10% sales = " + ztape.TenPercentDiscountSales);
 
-            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.QUAN), 0) as TOTAL FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate BETWEEN '" + startTime
-                + "' AND '" + endTime + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript = 'EMPLOYEE DISCOUNT'";
+            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.QUAN), 0) as TOTAL FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate = '" + startDate + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript = 'EMPLOYEE DISCOUNT'";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.EmployeeMealsCount = (buffer == null || buffer == DBNull.Value) ? 0 : Convert.ToInt32(buffer);
             Log("Employee Meals Count = " + ztape.EmployeeMealsCount);
 
-            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.COSTEACH), 0) as TOTAL FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate BETWEEN '" + startTime
-                + "' AND '" + endTime + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript = 'EMPLOYEE DISCOUNT'";
+            paramText = "SELECT coalesce(SUM(dba.POSDETAIL.COSTEACH), 0) as TOTAL FROM dba.POSDETAIL INNER JOIN dba.promo ON dba.POSDETAIL.PRODNUM = dba.promo.PROMONUM WHERE dba.POSDETAIL.OpenDate = '" + startDate + "' AND dba.POSDETAIL.COSTEACH <> 0 AND dba.POSDETAIL.PRODTYPE = 100 AND dba.promo.descript = 'EMPLOYEE DISCOUNT'";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
@@ -246,8 +196,7 @@ namespace AutoZTape
 
             paramText = "select coalesce(sum(numcust), 0) from (select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax, numcust from (select posheader.opendate, posheader.status, posheader.timeend,"
                 + "posheader.finaltotal,posheader.numcust, posdetail.costeach, posdetail.quan, posheader.saletypeindex, posheader.transact, posdetail.prodtype, salestype.descript, posheader.nettotal, posheader.tax1 from dba.posheader"
-                + " left outer join dba.posdetail on posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate BETWEEN '" + startTime + "' AND '"
-                + endTime + "' and posheader.status = 3   and salestype.descript = 'QUICKSRV') x group by transact, numcust) x";
+                + " left outer join dba.posdetail on posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate = '" + startDate + "' and posheader.status = 3   and salestype.descript = 'QUICKSRV') x group by transact, numcust) x";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
@@ -256,8 +205,7 @@ namespace AutoZTape
 
             paramText = "select coalesce(sum(nettotal), 0) from (select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax, numcust from (select posheader.opendate, posheader.status, posheader.timeend,"
                 + "posheader.finaltotal,posheader.numcust, posdetail.costeach, posdetail.quan, posheader.saletypeindex, posheader.transact, posdetail.prodtype, salestype.descript, posheader.nettotal, posheader.tax1 from dba.posheader"
-                + " left outer join dba.posdetail on posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate BETWEEN '" + startTime + "' AND '"
-                + endTime + "' and posheader.status = 3   and salestype.descript = 'QUICKSRV') x group by transact, numcust) x";
+                + " left outer join dba.posdetail on posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate = '" + startDate + "' and posheader.status = 3   and salestype.descript = 'QUICKSRV') x group by transact, numcust) x";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
@@ -266,7 +214,7 @@ namespace AutoZTape
 
             paramText = "select coalesce(sum(numcust), 0) from(select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax, numcust from(select posheader.opendate, posheader.status, posheader.timeend, posheader.finaltotal, "
                 + "posheader.numcust, posdetail.costeach, posdetail.quan, posheader.saletypeindex, posheader.transact, posdetail.prodtype, salestype.descript, posheader.nettotal, posheader.tax1 from dba.posheader left outer join dba.posdetail on "
-                + "posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate BETWEEN '" + startTime + "' AND '" + endTime + "' and posheader.status = 3   and "
+                + "posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate = '" + startDate + "' and posheader.status = 3   and "
                 + "salestype.descript = 'PICK UP') x group by transact, numcust) x";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
@@ -276,7 +224,7 @@ namespace AutoZTape
 
             paramText = "select coalesce(sum(nettotal), 0) from(select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax, numcust from(select posheader.opendate, posheader.status, posheader.timeend, posheader.finaltotal, "
                 + "posheader.numcust, posdetail.costeach, posdetail.quan, posheader.saletypeindex, posheader.transact, posdetail.prodtype, salestype.descript, posheader.nettotal, posheader.tax1 from dba.posheader left outer join dba.posdetail on "
-                + "posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate BETWEEN '" + startTime + "' AND '" + endTime + "' and posheader.status = 3   and "
+                + "posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate = '" + startDate + "' and posheader.status = 3   and "
                 + "salestype.descript = 'PICK UP') x group by transact, numcust) x";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
@@ -286,7 +234,7 @@ namespace AutoZTape
 
             paramText = "select coalesce(sum(numcust), 0) from(select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax, numcust from(select posheader.opendate, posheader.status, posheader.timeend, posheader.finaltotal, "
                 + "posheader.numcust, posdetail.costeach, posdetail.quan, posheader.saletypeindex, posheader.transact, posdetail.prodtype, salestype.descript, posheader.nettotal, posheader.tax1 from dba.posheader left outer join dba.posdetail "
-                + "on posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate BETWEEN '" + startTime + "' AND '" + endTime + "' and posheader.status = 3 "
+                + "on posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate = '" + startDate + "' and posheader.status = 3 "
                 + "and salestype.descript = 'DRIVTHRU') x group by transact, numcust) x";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
@@ -296,7 +244,7 @@ namespace AutoZTape
 
             paramText = "select coalesce(sum(nettotal), 0) from(select transact, avg(finaltotal) finaltotal, avg(nettotal) nettotal, avg(tax1) tax, numcust from(select posheader.opendate, posheader.status, posheader.timeend, posheader.finaltotal, "
                 + "posheader.numcust, posdetail.costeach, posdetail.quan, posheader.saletypeindex, posheader.transact, posdetail.prodtype, salestype.descript, posheader.nettotal, posheader.tax1 from dba.posheader left outer join dba.posdetail "
-                + "on posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate BETWEEN '" + startTime + "' AND '" + endTime + "' and posheader.status = 3 "
+                + "on posheader.transact = posdetail.transact inner join dba.salestype on posheader.saletypeindex = salestype.saletypeindex where posheader.opendate = '" + startDate + "' and posheader.status = 3 "
                 + "and salestype.descript = 'DRIVTHRU') x group by transact, numcust) x";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
@@ -304,7 +252,7 @@ namespace AutoZTape
             ztape.DThruSales = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
             Log("DThru Sales = " + ztape.DThruSales);
 
-            paramText = "select coalesce(count(quan), 0) from(select* from dba.posdetail left outer join dba.refundreasons on posdetail.howordered = refundreasons.refnum  where opendate BETWEEN '" + startTime + "' AND '" + endTime + "' and refnum > 1000 and costeach<> 0) x";
+            paramText = "select coalesce(count(quan), 0) from(select* from dba.posdetail left outer join dba.refundreasons on posdetail.howordered = refundreasons.refnum  where opendate = '" + startDate + "' and refnum > 1000 and costeach<> 0) x";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
@@ -312,7 +260,7 @@ namespace AutoZTape
             Log("Voids count = " + ztape.VoidsCount);
 
 
-            paramText = "select coalesce(sum(costeach * quan), 0) from(select* from dba.posdetail left outer join dba.refundreasons on posdetail.howordered = refundreasons.refnum  where opendate BETWEEN '" + startTime + "' AND '" + endTime + "' and refnum > 1000 and costeach<> 0) x";
+            paramText = "select coalesce(sum(costeach * quan), 0) from(select* from dba.posdetail left outer join dba.refundreasons on posdetail.howordered = refundreasons.refnum  where opendate = '" + startDate + "' and refnum > 1000 and costeach<> 0) x";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
@@ -320,14 +268,14 @@ namespace AutoZTape
             Log("Voids sales = " + ztape.VoidsSales);
 
 
-            paramText = "select coalesce(count(*), 0) from dba.posheader where tax1exempt = 1 and opendate BETWEEN '" + startTime + "' AND '" + endTime + "'";
+            paramText = "select coalesce(count(*), 0) from dba.posheader where tax1exempt = 1 and opendate = '" + startDate + "'";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.NonTaxTransactionsCount = (buffer == null || buffer == DBNull.Value) ? 0 : Convert.ToInt32(buffer);
             Log("Non tax count = " + ztape.NonTaxTransactionsCount);
 
-            paramText = "select coalesce(sum(nettotal), 0) from dba.posheader where tax1exempt = 1 and opendate BETWEEN '" + startTime + "' AND '" + endTime + "'";
+            paramText = "select coalesce(sum(nettotal), 0) from dba.posheader where tax1exempt = 1 and opendate = '" + startDate + "'";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
@@ -335,21 +283,21 @@ namespace AutoZTape
             Log("Non tax sales = " + ztape.NonTaxTransactionsSales);
 
 
-            paramText = "select coalesce(sum(tender), 0) from(select * from  dba.Howpaid left outer join dba.MethodPay on howpaid.methodnum = methodpay.methodnum where opendate BETWEEN '" + startTime + "' AND '" + endTime + "' and descript = 'Gift Card' and tender < 0) x";
+            paramText = "select coalesce(sum(tender), 0) from(select * from  dba.Howpaid left outer join dba.MethodPay on howpaid.methodnum = methodpay.methodnum where opendate = '" + startDate + "' and descript = 'Gift Card' and tender < 0) x";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.GiftCardsSales = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
             Log("Gift card sales = " + ztape.GiftCardsSales);
 
-            paramText = "select coalesce(sum(tender), 0) from(select * from  dba.Howpaid left outer join dba.MethodPay on howpaid.methodnum = methodpay.methodnum where opendate BETWEEN '" + startTime + "' AND '" + endTime + "' and descript = 'Gift Card' and tender > 0) x";
+            paramText = "select coalesce(sum(tender), 0) from(select * from  dba.Howpaid left outer join dba.MethodPay on howpaid.methodnum = methodpay.methodnum where opendate = '" + startDate + "' and descript = 'Gift Card' and tender > 0) x";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
             ztape.GCRedemption = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
             Log("Gift card redemption = " + ztape.GCRedemption);
 
-            paramText = "select sum(tender) from(select* from  dba.Howpaid left outer join dba.MethodPay on howpaid.methodnum = methodpay.methodnum where opendate BETWEEN '" + startTime + "' AND '" + endTime + "' and descript = 'EMP Charge') x";
+            paramText = "select sum(tender) from(select* from  dba.Howpaid left outer join dba.MethodPay on howpaid.methodnum = methodpay.methodnum where opendate = '" + startDate + "' and descript = 'EMP Charge') x";
             Log("Executing '" + paramText + "'");
             cmd = new OdbcCommand(paramText, sybaseConnection);
             buffer = cmd.ExecuteScalar();
@@ -400,8 +348,6 @@ namespace AutoZTape
             }
 
             
-
-
             if (shouldPushTolive)
             {
                 Log("Push to live enabled, connecting to target");
