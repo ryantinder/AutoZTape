@@ -82,10 +82,6 @@ namespace AutoZTape
             targetConnection.Execute("update AutoZTapeMonitoring set runningversion = '" + currentVersion.ToString() + "', processinitiated = '" + DateTime.Now.ToString() + "', CP1_PacketGenerated = 0, CP2_MobileSalesGenerated = 0, " +
                                 "CP3_PacketPushed = 0, CP4_EndOfProgramReached = 0 where store = '" + ConfigurationManager.AppSettings.Get("Store") + "'");
             
-
-            System.Windows.Forms.Application.ThreadException += new System.Threading.ThreadExceptionEventHandler(Application_ThreadException);
-            System.Windows.Forms.Application.SetUnhandledExceptionMode(System.Windows.Forms.UnhandledExceptionMode.CatchException);
-            AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
             
             if (ConfigurationManager.AppSettings.Get("dateOverride") != "false")
             {
