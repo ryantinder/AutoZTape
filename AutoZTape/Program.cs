@@ -323,9 +323,18 @@ namespace AutoZTape
 
             ztape.CreditCardVisaMc2 = DriveCC1 + DriveCC3;
             Log("Drive CC = " + ztape.CreditCardVisaMc2);
+
+            // Tips: Tips occur when there is a non-zero amount of change, and the payment method was NOT cash (1001)
+            paramText = "select sum(change) from howpayapproved inner join posheader on howpayapproved.transact = posheader.transact where howpayapproved.transdate between '" + startTime + "' AND '" + endTime + "' and change > 0 and methodnum != 1001";
+            Log("Executing '" + paramText + "'");
+            cmd = new OdbcCommand(paramText, sybaseConnection);
+            buffer = cmd.ExecuteScalar();
+            double TotalTips = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
+            Log("TotalTips = " + TotalTips);
+            ztape.TotalTips = TotalTips;
             sybaseConnection.Close();
 
-            targetConnection.Execute("update AutoZTapeMonitoring set CP1_PacketGenerated = 1 where store = '" + ztape.Store + "'");
+            // targetConnection.Execute("update AutoZTapeMonitoring set CP1_PacketGenerated = 1 where store = '" + ztape.Store + "'");
          
 
             if (shouldFetchMobileSales)
@@ -334,7 +343,7 @@ namespace AutoZTape
                 {
                     ztape.CCMobile = fetchCCMobile(date);
                     Log("\nCCMobile = " + ztape.CCMobile);
-                    targetConnection.Execute("update AutoZTapeMonitoring set CP2_MobileSalesGenerated = 1 where store = '" + ztape.Store + "'");
+                    // targetConnection.Execute("update AutoZTapeMonitoring set CP2_MobileSalesGenerated = 1 where store = '" + ztape.Store + "'");
                 }
                 catch (Exception e)
                 {
@@ -356,8 +365,9 @@ namespace AutoZTape
 
                 targetConnection.Execute("dbo.updateZTape @ZTapeDate, @StoreId, @Store, @SubmitDate, @GrossSales, @ReportableSales, @SalesTax, @MgrMealsCount, @MgrMealsSales, @CouponsCount, "
                                         + "@CouponsSales, @TenPercentDiscountCount, @TenPercentDiscountSales, @EmployeeMealsCount, @EmployeeMealsSales, @EatInCount, @EatInSales, "
-                                        + "@CarryOutCount, @CarryOutSales, @DThruCount, @DThruSales, @VoidsCount, @VoidsSales, @NonTaxTransactionsCount, @NonTaxTransactionsSales, @GCSold, @GCRedemption, @EmpMealCharges, @CreditCardVisaMc2, @CCMobile", ztape);
-                targetConnection.Execute("update autoZTapeMonitoring set CP3_PacketPushed = 1 where store = '" + ztape.Store + "'");
+                                        + "@CarryOutCount, @CarryOutSales, @DThruCount, @DThruSales, @VoidsCount, @VoidsSales, @NonTaxTransactionsCount, @NonTaxTransactionsSales, "
+                                        + "@GCSold, @GCRedemption, @EmpMealCharges, @CreditCardVisaMc2, @CCMobile, @TotalTips", ztape);
+                // targetConnection.Execute("update autoZTapeMonitoring set CP3_PacketPushed = 1 where store = '" + ztape.Store + "'");
                 Log("Execution successful...terminating");
                 
             }
@@ -369,7 +379,7 @@ namespace AutoZTape
             Log("Program ending");
             DumpLog();
 
-            targetConnection.Execute("update autoZTapeMonitoring set CP4_EndOfProgramReached = 1 where store = '" + ztape.Store + "'");
+            // targetConnection.Execute("update autoZTapeMonitoring set CP4_EndOfProgramReached = 1 where store = '" + ztape.Store + "'");
             targetConnection.Close();
 
             if (shouldHoldTerminal || !shouldPushTolive)

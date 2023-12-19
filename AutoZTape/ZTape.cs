@@ -917,6 +917,12 @@ namespace AutoZTape
             get { return _CCMobile; }
             set { _CCMobile = value; }
         }
+        private double _TotalTips = 0;
 
+        public double TotalTips
+        {
+            get { return _TotalTips; }
+            set { _TotalTips = value; }
+        }
     }
 }
