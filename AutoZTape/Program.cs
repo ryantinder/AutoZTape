@@ -321,8 +321,7 @@ namespace AutoZTape
             double DriveCC3 = (buffer == null || buffer == DBNull.Value) ? 0 : Math.Abs((double)buffer);
             Log("DriveCC3 = " + DriveCC3);
 
-            ztape.CreditCardVisaMc2 = DriveCC1 + DriveCC3;
-            Log("Drive CC = " + ztape.CreditCardVisaMc2);
+
 
             // Tips: Tips occur when there is a non-zero amount of change, and the payment method was NOT cash (1001)
             paramText = "select sum(change) from howpayapproved inner join posheader on howpayapproved.transact = posheader.transact where howpayapproved.transdate between '" + startTime + "' AND '" + endTime + "' and change > 0 and methodnum != 1001";
@@ -335,7 +334,9 @@ namespace AutoZTape
             sybaseConnection.Close();
 
             // targetConnection.Execute("update AutoZTapeMonitoring set CP1_PacketGenerated = 1 where store = '" + ztape.Store + "'");
-         
+            // 1/11/24: Include Total Tips in creditCardVisaMc2
+            ztape.CreditCardVisaMc2 = DriveCC1 + DriveCC3 + TotalTips;
+            Log("Drive CC = " + ztape.CreditCardVisaMc2);
 
             if (shouldFetchMobileSales)
             {
